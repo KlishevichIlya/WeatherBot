@@ -1,13 +1,23 @@
-﻿using Telegram.Bot;
+﻿using System.Text.Json;
+using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using WeatherApi.Controllers;
+using WeatherBot.Models;
 using Yandex.Geocoder;
 
 namespace WeatherBot
 {
     public class Handlers
     {
+        private static readonly WeatherForecast _weatherForecast;
+
+        static Handlers()
+        {
+            _weatherForecast = new();
+        }
+        
         public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             var handler = update.Type switch
@@ -21,22 +31,21 @@ namespace WeatherBot
 
             if (message.Location is not null)
             {
-                await GetCustomerCity(botClient, message);               
+                var jsonString = await _weatherForecast.GetForecastAsync(message.Location.Latitude, message.Location.Longitude);
+                var weatherForecast = JsonSerializer.Deserialize<DayJson>(jsonString); 
+
             }
 
-            if (string.IsNullOrWhiteSpace(message.Text))
+            if (!string.IsNullOrWhiteSpace(message.Text))
             {
                 var action = message.Text!.Split(' ')[0] switch
                 {
                     "/hi" => SendMessageAsync(botClient, message),
-                    "/coordinates" => RequestCustomerCoordinate(botClient, message),
-                    "/location" => GetCustomerCity(botClient, message),
+                    "/getForecast" => RequestCustomerCoordinate(botClient, message),                   
                     _ => UnknownMessage(botClient, message),
                 };
                 await action;
             }
-            
-           
         }
 
         private static async Task RequestCustomerCoordinate(ITelegramBotClient botClient, Message message)
@@ -51,11 +60,6 @@ namespace WeatherBot
                 
             });
             var temp = botClient.SendTextMessageAsync(message.Chat.Id, "Send my location", replyMarkup: keyboard).Result.Location;            
-        }
-
-        private static async Task GetCustomerCity(ITelegramBotClient botClient, Message message)
-        {
-            await botClient.SendTextMessageAsync(message.Chat.Id, $"You lat: {message.Location!.Latitude} long:{message.Location!.Longitude}");           
         }
 
         private static async Task SendMessageAsync(ITelegramBotClient botClient, Message message)

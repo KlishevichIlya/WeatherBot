@@ -13,13 +13,13 @@ namespace WeatherApi.Controllers
         }
 
         [HttpGet("forecast")]
-        public async Task<IActionResult> GetForecast(string latitude, string longitude)
+        public async Task<string> GetForecastAsync([FromQuery]double latitude, double longitude)
         {
             var request = new HttpRequestMessage(HttpMethod.Get,
                 $"https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{latitude},{longitude}?key=AE6D3SXYY5DABUW8YZYJV33X7");
             var response = await client.SendAsync(request);
             var body = await response.Content.ReadAsStringAsync();
-            return Ok(response);
+            return body;
         }
     }
 }
